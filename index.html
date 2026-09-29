@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AgroVision AI - Smart Irrigation</title>
+
+    <style>
+        :root { color-scheme: light; --ink: #172720; --muted: #6a7970; --paper: #f4f3ec; --white: #fffefa; --forest: #143d30; --green: #286749; --lime: #d5f36a; --line: #dfe4d9; --amber: #a46d17; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { min-height: 100vh; background: var(--paper); color: var(--ink); font-family: "Trebuchet MS", "Segoe UI", sans-serif; }
+        button, input { font: inherit; }
+        .masthead { position: relative; overflow: hidden; padding: 34px max(5vw, 24px) 38px; background: var(--forest); color: #f8f8ef; }
+        .masthead::after { position: absolute; right: -55px; bottom: -168px; width: 390px; height: 270px; border: 1px solid rgba(213,243,106,.26); border-radius: 50%; box-shadow: 0 0 0 28px rgba(213,243,106,.045), 0 0 0 58px rgba(213,243,106,.035); content: ""; transform: rotate(-24deg); pointer-events: none; }
+        .masthead-inner, .container, footer { width: min(1180px, 90%); margin-right: auto; margin-left: auto; }
+        .masthead-inner { position: relative; z-index: 1; }
+        .eyebrow, .section-kicker { color: var(--lime); font-size: 11px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; }
+        .brand-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+        .brand { margin-top: 9px; font-family: Georgia, "Times New Roman", serif; font-size: 36px; font-weight: 400; }
+        .brand span { color: var(--lime); }
+        .live-chip { display: inline-flex; align-items: center; gap: 9px; padding: 10px 13px; border: 1px solid rgba(255,255,255,.24); border-radius: 3px; color: #e8eddf; font-size: 12px; }
+        .live-dot, .status-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: #adb7ad; }
+        .is-connected .live-dot, .is-connected .status-dot { background: #b6e65f; box-shadow: 0 0 0 4px rgba(182,230,95,.13); }
+        .is-connecting .live-dot { background: #f0bd53; animation: pulse 1s infinite; }
+        .masthead p { margin-top: 8px; color: #c2d0c4; font-size: 14px; }
+        .container { padding: 28px 0 16px; }
+        .connection { display: flex; align-items: end; gap: 12px; padding: 18px 20px; border: 1px solid var(--line); border-left: 4px solid var(--green); background: var(--white); animation: rise-in .55s both; }
+        .connection label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .ip-field { flex: 1; min-width: 180px; }
+        #espIP { width: 100%; padding: 11px 12px; border: 1px solid #ccd5cb; border-radius: 2px; outline: none; background: #fbfcf8; color: var(--ink); }
+        #espIP:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(40,103,73,.12); }
+        .connect-button { min-height: 43px; padding: 0 19px; border: 0; border-radius: 2px; background: var(--green); color: white; font-weight: 700; cursor: pointer; transition: background .2s, transform .2s; }
+        .connect-button:hover { background: var(--forest); transform: translateY(-1px); }
+        .connection-status { display: inline-flex; min-width: 125px; align-items: center; gap: 8px; padding: 12px 0 12px 8px; color: var(--muted); font-size: 12px; }
+        .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 31px 0 14px; }
+        .section-kicker { color: var(--green); }
+        .section-heading h2 { margin-top: 5px; font-family: Georgia, "Times New Roman", serif; font-size: 25px; font-weight: 400; }
+        .updated-at { color: var(--muted); font-size: 12px; }
+        .dashboard { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+        .card { position: relative; min-height: 164px; padding: 17px 18px; overflow: hidden; border: 1px solid var(--line); background: var(--white); animation: rise-in .55s both; transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease; }
+        .card:nth-child(2) { animation-delay: .06s; } .card:nth-child(3) { animation-delay: .12s; } .card:nth-child(4) { animation-delay: .18s; } .card:nth-child(5) { animation-delay: .24s; } .card:nth-child(6) { animation-delay: .3s; }
+        .card:hover { transform: translateY(-3px); border-color: #a9bda9; box-shadow: 0 9px 20px rgba(23,39,32,.07); }
+        .card-top { display: flex; align-items: center; justify-content: space-between; }
+        .card h3 { color: var(--muted); font-size: 12px; font-weight: 700; }
+        .icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: #edf3e8; font-size: 18px; }
+        .card:nth-child(2) .icon { background: #e7f2f3; } .card:nth-child(4) .icon { background: #fbefdf; } .card:nth-child(5) .icon { background: #f8f1d9; } .card:nth-child(6) .icon { background: #e5eff0; }
+        .value { margin-top: 14px; font-family: Georgia, "Times New Roman", serif; font-size: 32px; line-height: 1.1; font-variant-numeric: tabular-nums; transition: color .2s; }
+        .value.updated { animation: value-in .35s ease; }
+        .status { margin-top: 7px; color: var(--muted); font-size: 12px; }
+        #alert { display: none; margin-top: 14px; padding: 13px 16px; border-left: 4px solid var(--amber); background: #fff3d8; color: #704c12; font-size: 13px; font-weight: 700; animation: rise-in .25s both; }
+        .pump-box { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 14px; padding: 18px 20px; border: 1px solid var(--line); background: #e9eee5; animation: rise-in .55s .34s both; }
+        .pump-box h2 { font-family: Georgia, "Times New Roman", serif; font-size: 20px; font-weight: 400; }
+        .pump-box p { margin-top: 5px; color: var(--muted); font-size: 12px; }
+        .pump-status { min-width: 104px; padding: 10px 14px; border-radius: 2px; text-align: center; font-size: 12px; font-weight: 700; }
+        .pump-on { background: #d8efb7; color: #2f642d; } .pump-off { background: #e1e4df; color: #5c675f; }
+        footer { padding: 20px 0 26px; color: var(--muted); font-size: 11px; }
+        @keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes value-in { 0% { opacity: .45; transform: translateY(3px); } 100% { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 50% { opacity: .4; } }
+        @media (max-width: 700px) {
+            .masthead { padding: 27px 0 30px; } .masthead-inner, .container, footer { width: 92%; }
+            .brand-row { align-items: flex-start; } .brand { font-size: 30px; } .live-chip { padding: 8px; font-size: 10px; }
+            .connection { align-items: stretch; flex-wrap: wrap; padding: 15px; } .ip-field { flex-basis: 100%; }
+            .connect-button { flex: 1; } .connection-status { min-width: auto; justify-content: flex-end; }
+            .dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; } .card { min-height: 150px; padding: 13px; }
+            .value { font-size: 27px; } .section-heading h2 { font-size: 22px; }
+        }
+        @media (max-width: 380px) { .brand-row { display: block; } .live-chip { margin-top: 13px; } .updated-at { max-width: 105px; text-align: right; line-height: 1.5; } }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+    </style>
+</head>
+
+
+<body>
+
+<!-- ================= HEADER ================= -->
+
+<header class="masthead">
+    <div class="masthead-inner">
+        <div class="eyebrow">Smart agriculture / field station 01</div>
+        <div class="brand-row">
+            <h1 class="brand">AgroVision <span>AI</span></h1>
+            <div class="live-chip" id="liveChip"><span class="live-dot"></span><span id="liveLabel">Waiting for device</span></div>
+        </div>
+        <p>Live irrigation and growing conditions</p>
+    </div>
+</header>
+
+
+<div class="container">
+
+
+    <!-- ================= ESP32 CONNECTION ================= -->
+
+    <div class="connection">
+        <div class="ip-field">
+            <label for="espIP">ESP32 device address</label>
+            <input type="text" id="espIP" value="10.107.175.43" placeholder="192.168.1.105" autocomplete="url" spellcheck="false">
+        </div>
+        <button class="connect-button" id="connectButton" onclick="connectESP()">Connect device</button>
+        <span id="connectionStatus" class="connection-status"><span class="status-dot"></span><span id="statusText">Not connected</span></span>
+    </div>
+
+
+    <!-- ================= ALERT ================= -->
+
+    <div id="alert" role="status" aria-live="polite"></div>
+
+    <div class="section-heading">
+        <div><div class="section-kicker">Sensor overview</div><h2>Growing conditions</h2></div>
+        <div class="updated-at" id="updatedAt">Waiting for first reading</div>
+    </div>
+
+
+    <!-- ================= SENSOR DASHBOARD ================= -->
+
+    <div class="dashboard">
+
+
+        <!-- TEMPERATURE -->
+
+        <div class="card">
+
+            <div class="icon">
+                🌡️
+            </div>
+
+            <h3>
+                Temperature
+            </h3>
+
+            <div
+                class="value"
+                id="temperature">
+                -- °C
+            </div>
+
+        </div>
+
+
+        <!-- HUMIDITY -->
+
+        <div class="card">
+
+            <div class="icon">
+                💧
+            </div>
+
+            <h3>
+                Humidity
+            </h3>
+
+            <div
+                class="value"
+                id="humidity">
+                -- %
+            </div>
+
+        </div>
+
+
+        <!-- SOIL -->
+
+        <div class="card">
+
+            <div class="icon">
+                🌱
+            </div>
+
+            <h3>
+                Soil Moisture
+            </h3>
+
+            <div
+                class="value"
+                id="soil">
+                -- %
+            </div>
+
+            <div
+                class="status"
+                id="soilStatus">
+                Waiting...
+            </div>
+
+        </div>
+
+
+        <!-- RAIN -->
+
+        <div class="card">
+
+            <div class="icon">
+                🌧️
+            </div>
+
+            <h3>
+                Rain
+            </h3>
+
+            <div
+                class="value"
+                id="rain">
+                --
+            </div>
+
+            <div
+                class="status"
+                id="rainRaw">
+                Raw: --
+            </div>
+
+        </div>
+
+
+        <!-- LIGHT -->
+
+        <div class="card">
+
+            <div class="icon">
+                ☀️
+            </div>
+
+            <h3>
+                Light
+            </h3>
+
+            <div
+                class="value"
+                id="light">
+                --
+            </div>
+
+        </div>
+
+
+        <!-- WATER FLOW -->
+
+        <div class="card">
+
+            <div class="icon">
+                🌊
+            </div>
+
+            <h3>
+                Water Flow
+            </h3>
+
+            <div
+                class="value"
+                id="flow">
+                -- L/min
+            </div>
+
+            <div
+                class="status"
+                id="water">
+                Total: -- L
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= PUMP ================= -->
+
+    <div class="pump-box">
+
+        <div>
+
+            <h2>
+                🚰 Irrigation Pump
+            </h2>
+
+            <p>
+                Automatic soil moisture control
+            </p>
+
+        </div>
+
+
+        <span
+            id="pump"
+            class="pump-status pump-off">
+
+            PUMP OFF
+
+        </span>
+
+    </div>
+
+
+</div>
+
+
+<!-- ================= FOOTER ================= -->
+
+<footer>AgroVision AI <span id="footerYear"></span> · Field data updates automatically</footer>
+
+
+<script>
+    const espIPInput = document.getElementById("espIP");
+    const updateInterval = 2000;
+    let updateTimer = null;
+    let requestInProgress = false;
+
+    document.getElementById("footerYear").textContent = `© ${new Date().getFullYear()}`;
+    espIPInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") connectESP();
+    });
+
+    function setConnectionState(state, message) {
+        const connection = document.querySelector(".connection");
+        const liveChip = document.getElementById("liveChip");
+        connection.classList.toggle("is-connecting", state === "connecting");
+        connection.classList.toggle("is-connected", state === "connected");
+        liveChip.classList.toggle("is-connecting", state === "connecting");
+        liveChip.classList.toggle("is-connected", state === "connected");
+        document.getElementById("statusText").textContent = message;
+        document.getElementById("liveLabel").textContent = state === "connected" ? "Live connection" : state === "connecting" ? "Connecting" : "Device offline";
+    }
+
+    function connectESP() {
+        const address = espIPInput.value.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
+        if (!address) {
+            espIPInput.focus();
+            setConnectionState("offline", "Enter device IP");
+            return;
+        }
+        espIPInput.value = address;
+        clearInterval(updateTimer);
+        setConnectionState("connecting", "Connecting...");
+        getSensorData(address);
+        updateTimer = setInterval(() => getSensorData(address), updateInterval);
+    }
+
+    function readValue(data, keys) {
+        for (const key of keys) {
+            if (data[key] !== undefined && data[key] !== null && data[key] !== "") return data[key];
+        }
+        return null;
+    }
+
+    function formatNumber(value, digits, suffix) {
+        const number = Number(value);
+        return Number.isFinite(number) ? `${number.toFixed(digits)}${suffix}` : "--";
+    }
+
+    function renderValue(id, value) {
+        const element = document.getElementById(id);
+        if (element.textContent !== value) {
+            element.textContent = value;
+            element.classList.remove("updated");
+            void element.offsetWidth;
+            element.classList.add("updated");
+        }
+    }
+
+    function asBoolean(value) {
+        if (typeof value === "string") return ["true", "1", "yes", "on", "detected"].includes(value.toLowerCase());
+        return Boolean(value);
+    }
+
+    async function getSensorData(address) {
+        if (requestInProgress) return;
+        requestInProgress = true;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4500);
+        try {
+            const response = await fetch(`http://${address}/api/data`, { cache: "no-store", signal: controller.signal });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const temperature = readValue(data, ["temperature", "temp"]);
+            const humidity = readValue(data, ["humidity", "airHumidity"]);
+            const soil = readValue(data, ["soilPercent", "soilMoisture", "soil"]);
+            const soilStatus = readValue(data, ["soilStatus"]);
+            const rain = asBoolean(readValue(data, ["rain", "rainDetected"]));
+            const light = asBoolean(readValue(data, ["light", "isBright"]));
+            const rainValue = readValue(data, ["rainValue", "rainRaw"]);
+            const flow = readValue(data, ["flowRate", "flow"]);
+            const totalLitres = readValue(data, ["totalLitres", "totalLiters", "waterTotal"]);
+            const pumpOn = asBoolean(readValue(data, ["pump", "pumpOn"]));
+
+            renderValue("temperature", formatNumber(temperature, 1, " °C"));
+            renderValue("humidity", formatNumber(humidity, 1, " %"));
+            renderValue("soil", formatNumber(soil, 0, " %"));
+            renderValue("soilStatus", soilStatus === null ? "" : String(soilStatus));
+            renderValue("rain", rain ? "DETECTED" : "NO RAIN");
+            renderValue("rainRaw", `Raw: ${rainValue ?? "--"}`);
+            renderValue("light", light ? "BRIGHT" : "DARK");
+            renderValue("flow", formatNumber(flow, 2, " L/min"));
+            renderValue("water", `Total: ${formatNumber(totalLitres, 2, " L")}`);
+
+            const pump = document.getElementById("pump");
+            pump.textContent = pumpOn ? "PUMP ON" : "PUMP OFF";
+            pump.className = `pump-status ${pumpOn ? "pump-on" : "pump-off"}`;
+            if (rain) showAlert("Rain detected. Check irrigation before watering.");
+            else if (String(soilStatus).toUpperCase() === "DRY") showAlert("Soil is dry. Irrigation may be needed.");
+            else hideAlert();
+
+            setConnectionState("connected", "ESP32 connected");
+            document.getElementById("updatedAt").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · every 2 sec`;
+        } catch (error) {
+            setConnectionState("offline", error.name === "AbortError" ? "Device timed out" : "Connection failed");
+            showAlert("No sensor data received. Check the ESP32 Wi-Fi, /api/data endpoint, and browser CORS access.");
+        } finally {
+            clearTimeout(timeout);
+            requestInProgress = false;
+        }
+    }
+
+    function showAlert(message) {
+        const alertBox = document.getElementById("alert");
+        alertBox.textContent = message;
+        alertBox.style.display = "block";
+    }
+
+    function hideAlert() {
+        document.getElementById("alert").style.display = "none";
+    }
+
+    connectESP();
+</script>
+
+</body>
+</html>
